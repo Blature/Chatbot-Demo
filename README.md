@@ -1,98 +1,218 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Telegram Chatbot Demo
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS-based Telegram chatbot that provides information about computer hardware products using OpenAI GPT integration.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- 🤖 **Telegram Bot Integration**: Interactive chatbot using Telegraf
+- 🧠 **AI-Powered Responses**: OpenAI GPT-4 integration for intelligent conversations
+- 💾 **Product Database**: PostgreSQL database for storing computer hardware products
+- 🌐 **RESTful API**: Product management endpoints
+- 🐳 **Docker Support**: Containerized deployment with Docker Compose
+- 🔧 **TypeScript**: Full TypeScript support with NestJS framework
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Tech Stack
 
-## Project setup
+- **Framework**: NestJS
+- **Database**: PostgreSQL with TypeORM
+- **Bot Framework**: Telegraf (nestjs-telegraf)
+- **AI Integration**: OpenAI API
+- **Language**: TypeScript
+- **Containerization**: Docker & Docker Compose
 
+## Prerequisites
+
+- Node.js 20+
+- Docker and Docker Compose
+- Telegram Bot Token (from @BotFather)
+- OpenAI API Key
+
+## Environment Setup
+
+1. Clone the repository:
 ```bash
-$ npm install
+git clone <repository-url>
+cd Chatbot-Demo
 ```
 
-## Compile and run the project
+2. Create a `.env` file in the root directory:
+```env
+PORT=3000
 
-```bash
-# development
-$ npm run start
+# Database Configuration
+DATABASE_HOST=db
+DATABASE_PORT=5432
+DATABASE_USER=postgres
+DATABASE_PASSWORD=postgres
+DATABASE_NAME=products_db
 
-# watch mode
-$ npm run start:dev
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key_here
 
-# production mode
-$ npm run start:prod
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 ```
 
-## Run tests
+## Getting Your API Keys
 
+### Telegram Bot Token
+1. Message @BotFather on Telegram
+2. Send `/newbot` command
+3. Follow the instructions to create your bot
+4. Copy the provided token to your `.env` file
+
+### OpenAI API Key
+1. Visit [OpenAI Platform](https://platform.openai.com/)
+2. Create an account or sign in
+3. Navigate to API Keys section
+4. Create a new API key
+5. Copy the key to your `.env` file
+
+## Running with Docker (Recommended)
+
+### Quick Start
 ```bash
-# unit tests
-$ npm run test
+# Build and start all services
+docker-compose up --build
 
-# e2e tests
-$ npm run test:e2e
+# Run in background
+docker-compose up --build -d
 
-# test coverage
-$ npm run test:cov
+# Stop services
+docker-compose down
 ```
 
-## Deployment
+### Services
+The Docker setup includes:
+- **App**: NestJS application (Port: 3000)
+- **Database**: PostgreSQL (Port: 5432)
+- **Adminer**: Database management UI (Port: 8080)
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Accessing Services
+- **API**: http://localhost:3000
+- **Database Admin**: http://localhost:8080
+  - System: PostgreSQL
+  - Server: db
+  - Username: postgres
+  - Password: postgres
+  - Database: products_db
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Local Development
 
+### Installation
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Development Mode
+```bash
+npm run start:dev
+```
 
-## Resources
+### Build
+```bash
+npm run build
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### Production
+```bash
+npm run start:prod
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## API Endpoints
+
+### Products
+- `GET /products` - Get all products
+- `GET /products/search?name=<product_name>` - Search product by name
+- `POST /products` - Create a new product
+
+### Example Product Creation
+```bash
+curl -X POST http://localhost:3000/products \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "RTX 4090",
+    "brand": "NVIDIA",
+    "description": "High-end graphics card for gaming and AI workloads",
+    "price": 1599.99,
+    "stock": 10
+  }'
+```
+
+## Bot Usage
+
+1. Start a conversation with your bot on Telegram
+2. Send `/start` to begin
+3. Ask questions about computer hardware:
+   - "Tell me about RTX 4090"
+   - "What's the price of Intel i9?"
+   - "Do you have any AMD processors?"
+
+The bot will:
+- Search for relevant products in the database
+- Use AI to provide detailed, contextual responses
+- Support multiple languages based on user's Telegram language
+
+## Project Structure
+
+```
+src/
+├── app.module.ts          # Main application module
+├── main.ts               # Application entry point
+├── products/             # Product management module
+│   ├── entities/         # Database entities
+│   ├── products.controller.ts
+│   ├── products.service.ts
+│   └── products.module.ts
+└── telegram/             # Telegram bot module
+    ├── chat.service.ts   # AI chat logic
+    ├── telegram.service.ts # Bot message handlers
+    └── telegram.module.ts
+```
+
+## Testing
+
+```bash
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Test coverage
+npm run test:cov
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Bot Token Error**: Ensure your Telegram bot token is correct in `.env`
+2. **Database Connection**: Make sure PostgreSQL is running and credentials are correct
+3. **OpenAI API**: Verify your API key and check rate limits
+4. **Docker Issues**: Try `docker-compose down` and `docker-compose up --build`
+
+### Logs
+```bash
+# View application logs
+docker-compose logs app
+
+# View database logs
+docker-compose logs db
+
+# Follow logs in real-time
+docker-compose logs -f
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
 
 ## Support
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+For issues and questions, please open an issue in the repository.
