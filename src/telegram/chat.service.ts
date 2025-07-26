@@ -4,9 +4,15 @@ import { ProductsService } from '../products/products.service';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+interface ChatMemory {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 @Injectable()
 export class ChatService {
   private openai: OpenAI;
+  private memory: Record<string, ChatMemory[]> = {};
 
   constructor(private readonly productsService: ProductsService) {
     this.openai = new OpenAI({
@@ -23,7 +29,7 @@ Message: "${question}"
     `.trim();
 
     const res = await this.openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-3.5-turbo-1106',
       messages: [{ role: 'user', content: detectionPrompt }],
     });
 
@@ -31,35 +37,73 @@ Message: "${question}"
     return answer === 'yes';
   }
 
-  async ask(question: string, language: string): Promise<string> {
+  private saveToMemory(
+    userId: string,
+    role: 'user' | 'assistant',
+    content: string,
+  ) {
+    if (!this.memory[userId]) this.memory[userId] = [];
+    this.memory[userId].push({ role, content });
+
+    if (this.memory[userId].length > 10) {
+      this.memory[userId] = this.memory[userId].slice(-10);
+    }
+  }
+
+  async ask(
+    question: string,
+    language: string,
+    userId = 'default',
+  ): Promise<string> {
     const isListRequest = await this.isProductListQuestion(question);
 
     if (isListRequest) {
       const names = await this.productsService.findAllNames();
-      if (names.length === 0)
-        return 'No products have been registered in the store.';
-      return `Store Product List:\n- ${names.join('\n- ')}`;
+      const answer =
+        names.length === 0
+          ? 'No products have been registered in the store.'
+          : `Store Product List:\n- ${names.join('\n- ')}`;
+
+      this.saveToMemory(userId, 'user', question);
+      this.saveToMemory(userId, 'assistant', answer);
+      return answer;
     }
 
     const systemPrompt = `
-You are an AI assistant for a computer hardware store.
-Only answer questions related to computer parts and our store's products.
-If the question is unrelated, reply: "Sorry, I can only help with computer hardware-related questions."
-Answer in the same language as the user question.
-    `.trim();
+You are an AI assistant working for a computer hardware store. 
+You help customers find and learn about computer components (GPUs, CPUs, RAM, SSDs, etc). 
+You have access to a product database from the store via a function called 'getProductInfo'.
+
+Always try to answer with helpful, friendly and professional tone. 
+If the user asks about a product not in the store, still explain it briefly using your own knowledge, and clearly mention it's not available.
+
+Your goal is to act like a human assistant who is both technical and customer-friendly.
+If the user asks for a list of products or brand suggestions, respond naturally, like a person would.
+`.trim();
 
     const tools: OpenAI.Chat.ChatCompletionTool[] = [
       {
         type: 'function',
         function: {
           name: 'getProductInfo',
-          description: 'Get product info from database',
+          description:
+            'Fetch product info from the database using product name or filters',
           parameters: {
             type: 'object',
             properties: {
               name: {
                 type: 'string',
-                description: 'Product name the user asked about',
+                description:
+                  'Name or partial name of the product user is asking about',
+              },
+              brand: {
+                type: 'string',
+                description: 'Brand of the product (optional)',
+              },
+              category: {
+                type: 'string',
+                description:
+                  'Product category like GPU, CPU, RAM etc (optional)',
               },
             },
             required: ['name'],
@@ -68,12 +112,16 @@ Answer in the same language as the user question.
       },
     ];
 
+    const memoryMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      ...((this.memory[userId] ||
+        []) as OpenAI.Chat.ChatCompletionMessageParam[]),
+      { role: 'user', content: question },
+    ];
+
     const initial = await this.openai.chat.completions.create({
-      model: 'gpt-4-0613',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: question },
-      ],
+      model: 'gpt-3.5-turbo-1106',
+      messages: memoryMessages,
       tools,
       tool_choice: 'auto',
     });
@@ -81,35 +129,56 @@ Answer in the same language as the user question.
     const assistantMessage = initial.choices[0].message;
 
     if (!assistantMessage.tool_calls) {
-      return assistantMessage.content?.trim() || 'No response from GPT.';
+      const reply = assistantMessage.content?.trim() || 'No response from GPT.';
+      this.saveToMemory(userId, 'user', question);
+      this.saveToMemory(userId, 'assistant', reply);
+      return reply;
     }
 
-    const toolCall = assistantMessage.tool_calls[0];
-    const toolArgs = JSON.parse(toolCall.function.arguments);
-    const product = await this.productsService.findByName(toolArgs.name);
+    const toolCalls = assistantMessage.tool_calls;
+    const toolResponses: OpenAI.Chat.ChatCompletionMessageParam[] = [];
 
-    const toolResponse = product
-      ? `Product: ${product.name}, Brand: ${product.brand}, Description: ${product.description}, Price: ${product.price}, Stock: ${product.stock}`
-      : 'Product not found in database.';
+    for (const toolCall of toolCalls) {
+      const toolArgs = JSON.parse(toolCall.function.arguments);
+      const products = await this.productsService.findByFilters({
+        name: toolArgs.name,
+        brand: toolArgs.brand,
+        category: toolArgs.category,
+      });
+
+      const response = products.length
+        ? products
+            .map(
+              (p) =>
+                `Product: ${p.name}, Brand: ${p.brand}, Description: ${p.description}, Price: $${p.price}, Stock: ${p.stock}`,
+            )
+            .join('\n\n')
+        : 'Product not found in database.';
+
+      toolResponses.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        content: response,
+      });
+    }
 
     const second = await this.openai.chat.completions.create({
-      model: 'gpt-4-0613',
+      model: 'gpt-3.5-turbo-1106',
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: question },
+        ...memoryMessages,
         {
           role: 'assistant',
           content: null,
           tool_calls: assistantMessage.tool_calls,
         },
-        {
-          role: 'tool',
-          tool_call_id: toolCall.id,
-          content: toolResponse,
-        },
+        ...toolResponses,
       ],
     });
 
-    return second.choices[0].message?.content?.trim() || 'No response.';
+    const finalAnswer =
+      second.choices[0].message?.content?.trim() || 'No response.';
+    this.saveToMemory(userId, 'user', question);
+    this.saveToMemory(userId, 'assistant', finalAnswer);
+    return finalAnswer;
   }
 }

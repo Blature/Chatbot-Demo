@@ -1,40 +1,68 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike, FindOptionsWhere } from 'typeorm';
 import { Product } from './entities/product.entity';
-import * as stringSimilarity from 'string-similarity';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectRepository(Product)
-    private productRepository: Repository<Product>,
+    private readonly productRepo: Repository<Product>,
   ) {}
 
-  findAll(): Promise<Product[]> {
-    return this.productRepository.find();
+  async findByName(name: string): Promise<Product | null> {
+    return await this.productRepo.findOne({
+      where: { name: ILike(`%${name}%`) },
+    });
   }
+
   async findAllNames(): Promise<string[]> {
-    const products = await this.productRepository.find({ select: ['name'] });
+    const products = await this.productRepo.find();
     return products.map((p) => p.name);
   }
 
-  async findByName(name: string): Promise<Product | null> {
-    const allProducts = await this.productRepository.find();
-    const names = allProducts.map((p) => p.name);
+  async findByFilters(filters: {
+    name?: string;
+    brand?: string;
+    category?: string;
+  }): Promise<Product[]> {
+    const qb = this.productRepo.createQueryBuilder('product');
 
-    const match = stringSimilarity.findBestMatch(name.toLowerCase(), names);
-    const best = match.bestMatch;
-
-    if (best.rating > 0.5) {
-      return allProducts.find((p) => p.name === best.target) || null;
+    if (filters.name) {
+      qb.andWhere('LOWER(product.name) LIKE LOWER(:name)', {
+        name: `%${filters.name}%`,
+      });
     }
 
-    return null;
+    if (filters.brand) {
+      qb.andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
+        brand: `%${filters.brand}%`,
+      });
+    }
+
+    if (filters.category) {
+      qb.andWhere('LOWER(product.category) = LOWER(:category)', {
+        category: filters.category,
+      });
+    }
+
+    return qb.getMany();
   }
 
-  create(product: Partial<Product>) {
-    const newProduct = this.productRepository.create(product);
-    return this.productRepository.save(newProduct);
+  async filterProducts({
+    name,
+    brand,
+    category,
+  }: {
+    name?: string;
+    brand?: string;
+    category?: string;
+  }): Promise<Product[]> {
+    const where: FindOptionsWhere<Product> = {};
+    if (name) where.name = ILike(`%${name}%`);
+    if (brand) where.brand = ILike(`%${brand}%`);
+    if (category) where.category = ILike(`%${category}%`);
+
+    return this.productRepo.find({ where });
   }
 }
