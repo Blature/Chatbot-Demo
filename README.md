@@ -1,175 +1,76 @@
 # AI Chemical Products Sales Assistant
 
-A NestJS + PostgreSQL + Telegram bot application that works as a domain-specific AI sales assistant for chemical products.
+A production-ready NestJS + PostgreSQL backend with a Telegram bot that acts as a domain-specific AI sales assistant for chemical and lab products.
 
-## Features
+## Architecture
+- Backend: NestJS (TypeScript)
+- DB: PostgreSQL (service name: postgres) with float8[] arrays for vector embeddings
+- AI: OpenAI API (text-embedding-3-small, gpt-4o-mini)
+- Bot: Telegram (telegraf)
+- Containerization: Docker + docker-compose
+- Data sources: Excel (.xlsx) or JSON (products_enriched.json)
 
-- 📊 **Excel Import**: Reads product data from Excel files
-- 🤖 **AI-Powered**: Uses OpenAI GPT-4o-mini for intelligent responses
-- 🔍 **Semantic Search**: Vector embeddings for product search
-- 💬 **Telegram Bot**: Interactive chat interface
-- 🐳 **Docker Ready**: Complete containerization
-- 🇮🇷 **Persian Support**: Fully supports Persian language
+## How it works
+1) Ingestion: A script reads your products from backend/data (JSON preferred; Excel supported) and inserts rows into the database.  
+2) Embeddings: For each product, an OpenAI embedding is generated and stored for semantic search.  
+3) Chat flow: Telegram messages are analyzed, relevant products are fetched (keyword + semantic), and a concise, sales-oriented answer is returned.  
+4) Domain guard: The bot politely refuses out-of-scope topics and keeps the conversation focused on chemical/lab sales.
 
-## Tech Stack
+## Requirements
+- Docker + docker-compose
+- OpenAI API key
+- Telegram bot token
 
-- **Backend**: NestJS (TypeScript)
-- **Database**: PostgreSQL with float8[] arrays for embeddings
-- **AI**: OpenAI API (text-embedding-3-small + gpt-4o-mini)
-- **Bot**: Telegram Bot API (telegraf)
-- **Deployment**: Docker + docker-compose
-- **Excel Parsing**: xlsx npm package
+## Environment
+Create .env (root) from .env.example and fill:
+- OPENAI_API_KEY
+- TELEGRAM_BOT_TOKEN
+- (optional) PORT=3000, NODE_ENV=production
+Note: docker-compose sets DATABASE_URL for the backend container automatically.
 
-## Quick Start
+## Run with Docker (recommended)
+1) Start services:
+   docker-compose up --build -d
+2) Seed data (choose one):
+   - Use your files: put products.xlsx or products_enriched.json in backend/data, then:
+     docker exec ai_backend npm run seed:prod
+   - Generate a sample Excel first:
+     docker exec ai_backend node scripts/create-sample-excel.js
+     docker exec ai_backend npm run seed:prod
+   The seeder looks for /app/data/products_enriched.json or /app/data/products.xlsx inside the container (mapped from ./backend/data).
+3) Check logs:
+   docker-compose logs -f backend
+4) Talk to your Telegram bot using the configured token.
 
-### 1. Clone and Setup
+## Local development (without Docker for the app)
+- DB: You can keep docker-compose running only PostgreSQL (exposes 5433 on host), or use your own DB.
+- App:
+  cd backend
+  npm install
+  npm run start:dev
+- Seeding (dev mode uses ts-node):
+  npm run seed
 
-```bash
-git clone <repository-url>
-cd ai-seller
-cp .env.example .env
-```
+## Useful commands
+- Start all: docker-compose up --build -d
+- Stop all: docker-compose down
+- Backend logs: docker-compose logs -f backend
+- Exec into backend: docker exec -it ai_backend sh
+- Rerun seed (prod): docker exec ai_backend npm run seed:prod
 
-### 2. Configure Environment
-
-Edit `.env` file with your credentials:
-
-```env
-DATABASE_URL=postgresql://postgres:password@postgres:5432/ai_seller
-OPENAI_API_KEY=your_openai_api_key_here
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-```
-
-### 3. Start with Docker
-
-```bash
-docker-compose up --build
-```
-
-### 4. Create Sample Data
-
-```bash
-# Generate sample Excel file
-docker exec ai_backend node scripts/create-sample-excel.js
-
-# Import products and generate embeddings
-docker exec ai_backend npm run seed:prod
-```
-
-### 5. Test Your Bot
-
-Start a chat with your Telegram bot and ask about chemical products!
-
-## Database Schema
-
-### Products Table
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| product_code | text | Product code from Excel |
-| product_name | text | Product description |
-| unit | text | Unit of measurement |
-
-### Product Embeddings Table
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| product_id | uuid | Foreign key to products |
-| embedding | float8[] | OpenAI embedding vector |
-
-## Excel File Format
-
-Your Excel file should have these columns:
-
-| ردیف | کد کالا | شرح کالا | واحد 1 |
-|------|---------|----------|--------|
-| 1 | CH001 | اسید سولفوریک 98% | لیتر |
-| 2 | CH002 | سود سوزآور | کیلوگرم |
-
-## API Endpoints
-
-The application primarily works through Telegram bot, but you can extend it with REST APIs.
-
-## Development
-
-### Local Development
-
-```bash
-cd backend
-npm install
-npm run start:dev
-```
-
-### Database Migration
-
-```bash
-# The app uses TypeORM synchronize for demo purposes
-# For production, use proper migrations
-```
-
-### Seeding Data
-
-```bash
-# Development
-npm run seed
-
-# Production
-npm run seed:prod
-```
-
-## Docker Commands
-
-```bash
-# Build and start
-docker-compose up --build
-
-# Stop services
-docker-compose down
-
-# View logs
-docker-compose logs -f
-
-# Execute commands in backend container
-docker exec ai_backend npm run seed:prod
-```
-
-## AI Behavior Rules
-
-- ✅ Always responds in chemical product domain
-- ✅ Never says "I don't know" or gives unrelated answers
-- ✅ Uses product data to enrich responses
-- ✅ Maintains friendly, expert, sales-oriented tone
-- ✅ Keeps conversation memory (last 5 exchanges)
-- ✅ Responds in Persian language
+## Project structure (key parts)
+- backend/src: NestJS source
+- backend/scripts: ingest-products.ts (seeding), init-db.sql (DB helpers)
+- backend/data: your product files (mounted to /app/data)
 
 ## Troubleshooting
+- No products found in chat: ensure backend/data contains products_enriched.json or products.xlsx and rerun seed. Confirm inside container: docker exec ai_backend ls -la /app/data
+- OpenAI errors: verify OPENAI_API_KEY and billing
+- Telegram not responding: check TELEGRAM_BOT_TOKEN and backend logs
+- DB not ready: docker-compose ensures healthcheck; wait a few seconds or check docker-compose logs postgres
 
-### Common Issues
-
-1. **Bot not responding**: Check TELEGRAM_BOT_TOKEN
-2. **OpenAI errors**: Verify OPENAI_API_KEY and billing
-3. **Database connection**: Ensure PostgreSQL is running
-4. **Excel import fails**: Check file path and format
-
-### Logs
-
-```bash
-# View all logs
-docker-compose logs
-
-# View specific service logs
-docker-compose logs backend
-docker-compose logs postgres
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+## Security notes
+- Do not commit real API keys/tokens. Use .env and secret management in production.
 
 ## License
-
-MIT License - see LICENSE file for details.
+MIT
