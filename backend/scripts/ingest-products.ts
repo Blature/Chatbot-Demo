@@ -14,25 +14,25 @@ async function ingestProducts() {
   const dataSource = app.get(DataSource);
 
   try {
-    // Initialize database functions
+
     console.log('Initializing database functions...');
-    // In production, files are in /app/scripts, in development they're relative to __dirname
+
     let sqlScript: string;
     try {
       sqlScript = fs.readFileSync(path.join(__dirname, 'init-db.sql'), 'utf8');
     } catch (error) {
-      // Fallback for production build: use original scripts directory
+
       sqlScript = fs.readFileSync('/app/scripts/init-db.sql', 'utf8');
     }
     await dataSource.query(sqlScript);
     console.log('Database functions initialized.');
 
-    // Clear existing data
+
     console.log('Clearing existing data...');
     await productsService.clearAllData();
     console.log('Existing data cleared.');
 
-    // Prefer JSON source if available; fallback to Excel
+
     const primaryDataDir = path.join(__dirname, '..', 'data');
     const fallbackDataDir = '/app/data';
 
@@ -70,7 +70,6 @@ async function ingestProducts() {
       throw new Error(`Neither JSON nor Excel data source found. Missing candidates: ${jsonCandidates.join(', ')} and ${excelCandidates.join(', ')}`);
     }
 
-    // Process products in batches
     const batchSize = 10;
     let processedCount = 0;
 
@@ -80,7 +79,6 @@ async function ingestProducts() {
 
       for (const row of batch) {
         try {
-          // If coming from JSON, keys match entity fields; if from Excel, map English headers
           const isJson = Object.prototype.hasOwnProperty.call(row, 'product_code') || Object.prototype.hasOwnProperty.call(row, 'product_name');
 
           const productCode = isJson ? row['product_code']?.toString().trim() : row['Product Code']?.toString().trim();
@@ -92,7 +90,6 @@ async function ingestProducts() {
             continue;
           }
 
-          // Additional optional fields
           const priceRaw = isJson ? row['price'] : row['Price'];
           const price = priceRaw !== undefined && priceRaw !== null && `${priceRaw}`.toString().trim() !== '' ? parseFloat(priceRaw.toString()) : null;
 
@@ -115,7 +112,6 @@ async function ingestProducts() {
             }
           }
 
-          // Create product with all fields
           const product = await productsService.createProduct({
             product_code: productCode,
             product_name: productName,
@@ -130,7 +126,6 @@ async function ingestProducts() {
             available: available === null ? undefined : available,
           });
 
-          // Generate embedding from rich text
           const embeddingText = [
             productName,
             productCode,
@@ -146,7 +141,6 @@ async function ingestProducts() {
           
           const embedding = await productsService.generateEmbedding(embeddingText);
 
-          // Save embedding
           await productsService.createEmbedding(product.id, embedding);
 
           processedCount++;
@@ -157,7 +151,6 @@ async function ingestProducts() {
         }
       }
 
-      // Small delay between batches to avoid rate limiting
       if (i + batchSize < rows.length) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -174,5 +167,4 @@ async function ingestProducts() {
   }
 }
 
-// Run the script
 ingestProducts().catch(console.error);

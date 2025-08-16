@@ -1,7 +1,6 @@
 const XLSX = require('xlsx');
 const path = require('path');
 
-// Sample chemical products data with detailed information
 const products = [
   { 
     'Row': 1, 
@@ -285,14 +284,11 @@ const products = [
   }
 ];
 
-// Create workbook and worksheet
 const wb = XLSX.utils.book_new();
 const ws = XLSX.utils.json_to_sheet(products);
 
-// Add worksheet to workbook
 XLSX.utils.book_append_sheet(wb, ws, 'Products');
 
-// Write file
 const outputPath = path.join(__dirname, '..', 'data', 'products.xlsx');
 XLSX.writeFile(wb, outputPath);
 

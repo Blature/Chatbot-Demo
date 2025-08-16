@@ -64,11 +64,9 @@ export class ProductsService {
   }
 
   async clearAllData(): Promise<void> {
-    // Use CASCADE to handle foreign key constraints
     await this.dataSource.query('TRUNCATE TABLE "product_embeddings", "products" RESTART IDENTITY CASCADE');
   }
 
-  // Additional helper methods for comprehensive bot access
 
   async getProductByCode(productCode: string): Promise<Product | null> {
     return this.productRepository.findOne({
@@ -76,7 +74,6 @@ export class ProductsService {
     });
   }
 
-  // Case-insensitive code lookup
   async getProductByCodeInsensitive(productCode: string): Promise<Product | null> {
     return this.productRepository
       .createQueryBuilder('product')
